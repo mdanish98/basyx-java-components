@@ -52,5 +52,12 @@ public class AASServerExecutable {
 		component.startComponent();
 
 		logger.info("BaSyx AAS Server component started");
+		
+		Thread shutdownListener = new Thread(){
+		    public void run(){
+		    	component.stopComponent();
+		            }
+		        };
+		Runtime.getRuntime().addShutdownHook(shutdownListener);
 	}
 }

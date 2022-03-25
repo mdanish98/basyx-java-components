@@ -57,6 +57,7 @@ import org.eclipse.basyx.components.configuration.BaSyxMqttConfiguration;
 import org.eclipse.basyx.extensions.aas.aggregator.aasxupload.AASAggregatorAASXUpload;
 import org.eclipse.basyx.submodel.metamodel.api.ISubmodel;
 import org.eclipse.basyx.submodel.metamodel.api.identifier.IIdentifier;
+import org.eclipse.basyx.vab.exception.provider.ProviderException;
 import org.eclipse.basyx.vab.exception.provider.ResourceNotFoundException;
 import org.eclipse.basyx.vab.modelprovider.VABPathTools;
 import org.eclipse.basyx.vab.protocol.http.server.BaSyxContext;
@@ -226,9 +227,47 @@ public class AASServerComponent implements IComponent {
 
 		// Remove all AASs/SMs that were registered on startup
 		AASBundleHelper.deregister(registry, aasBundles);
+		
+		deregisterAASAndSmAddedDuringRuntime();
+		
 		cleanUpAASServerFeatures();
 
 		server.shutdown();
+	}
+	
+	private void deregisterAASAndSmAddedDuringRuntime() {
+		if(registry != null && isInMemoryBackend() && !isRegistryEmpty()) {
+			registry.lookupAll().stream().forEach(aasDesc -> { getSubmodelDescriptors(aasDesc)
+								.stream().forEach(smDesc -> deregisterSubmodel(aasDesc, smDesc));
+								deregisterAAS(aasDesc);
+								});
+		}
+	}
+	
+	private boolean isRegistryEmpty() {
+		return registry.lookupAll().isEmpty();
+	}
+	
+	private List<SubmodelDescriptor> getSubmodelDescriptors(AASDescriptor aasDesc) {
+		return registry.lookupSubmodels(aasDesc.getIdentifier());
+	}
+	
+	private void deregisterSubmodel(AASDescriptor aasDescriptor, SubmodelDescriptor submodelDescriptor) {
+		try {
+			registry.delete(aasDescriptor.getIdentifier(), submodelDescriptor.getIdentifier());
+			logger.info("The SM '" + submodelDescriptor.getIdShort() + "' successfully deregistered.");
+		} catch (ProviderException e) {
+			logger.info("The SM '" + submodelDescriptor.getIdShort() + "' can't be deregistered. It was not found in registry.");
+		}
+	}
+	
+	private void deregisterAAS(AASDescriptor aasDescriptor) {
+		try {
+			registry.delete(aasDescriptor.getIdentifier());
+			logger.info("The AAS '" + aasDescriptor.getIdShort() + "' successfully deregistered.");
+		} catch (ProviderException e) {
+			logger.info("The AAS '" + aasDescriptor.getIdShort() + "' can't be deregistered. It was not found in registry.");
+		}
 	}
 
 	public void addAASServerFeature(IAASServerFeature aasServerFeature) {
@@ -313,6 +352,10 @@ public class AASServerComponent implements IComponent {
 
 	private boolean isMongoDBBackend() {
 		return aasConfig.getAASBackend().equals(AASServerBackend.MONGODB);
+	}
+	
+	private boolean isInMemoryBackend() {
+		return aasConfig.getAASBackend().equals(AASServerBackend.INMEMORY);
 	}
 
 	private BaSyxMongoDBConfiguration createMongoDbConfiguration() {
