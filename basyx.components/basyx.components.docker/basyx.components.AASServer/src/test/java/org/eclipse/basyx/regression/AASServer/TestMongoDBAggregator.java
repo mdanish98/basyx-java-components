@@ -12,6 +12,8 @@ package org.eclipse.basyx.regression.AASServer;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -19,6 +21,7 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.eclipse.basyx.aas.aggregator.api.IAASAggregator;
 import org.eclipse.basyx.aas.manager.ConnectedAssetAdministrationShellManager;
+import org.eclipse.basyx.aas.metamodel.api.IAssetAdministrationShell;
 import org.eclipse.basyx.aas.metamodel.map.AssetAdministrationShell;
 import org.eclipse.basyx.aas.metamodel.map.descriptor.ModelUrn;
 import org.eclipse.basyx.aas.registration.api.IAASRegistry;
@@ -42,6 +45,7 @@ import org.eclipse.basyx.vab.exception.provider.ResourceNotFoundException;
 import org.eclipse.basyx.vab.modelprovider.api.IModelProvider;
 import org.eclipse.basyx.vab.protocol.api.IConnectorFactory;
 import org.eclipse.basyx.vab.protocol.http.connector.HTTPConnectorFactory;
+import org.eclipse.paho.client.mqttv3.logging.Logger;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -88,10 +92,18 @@ public class TestMongoDBAggregator extends AASAggregatorSuite {
 		manager = new ConnectedAssetAdministrationShellManager(registry, connectorFactory);
 
 		component.setRegistry(registry);
+		System.out.println("Starting AAS Server Component");
 		component.startComponent();
 
 		createAssetAdministrationShell();
 		createSubmodel();
+		createSubmodel2();
+	}
+
+	private static void createSubmodel2() {
+		Submodel sm = new Submodel("Test2", new Identifier(IdentifierType.CUSTOM, "TestSM2"));
+		manager.createSubmodel(new ModelUrn(aasId), sm);
+		
 	}
 
 	private static void initConfiguration() {
@@ -116,6 +128,8 @@ public class TestMongoDBAggregator extends AASAggregatorSuite {
 
 		assetAdministrationShell.setIdentification(identifier);
 		assetAdministrationShell.setIdShort("aasIdShort");
+		
+//		assetAdministrationShell.addSubmodel(new Submodel("TEST", new ModelUrn("TestIdentifier")));
 
 		manager.createAAS(assetAdministrationShell, getURL());
 	}
@@ -189,6 +203,58 @@ public class TestMongoDBAggregator extends AASAggregatorSuite {
 
 		assertEquals(SM_IDSHORT, persistentSubmodel.getIdShort());
 	}
+	
+	public void getAAS() {
+		MongoDBAASAggregator aggregator = new MongoDBAASAggregator(mongoDBConfig);
+		List<ISubmodel> persistentSubmodel = getSubmodelFromAgg(aggregator, new ModelUrn(aasId));
+//		ISubmodel persistentSubmodel = getSubmodelFromAggregator(aggregator);
+		
+//		System.out.println("Persistent Submodel : " + persistentSubmodel);
+		persistentSubmodel.stream().forEach(a -> System.out.println("persistent SM : " + a));
+		persistentSubmodel.stream().forEach(a -> manager.createSubmodel(new ModelUrn(aasId), (Submodel) a));
+		
+//		aggregator.getAASList().stream().map(a -> a.getIdentification()).forEach(id -> aggregator.deleteAAS(id));
+		
+//		aas1.addSubmodel(new Submodel(SM_IDSHORT, SM_IDENTIFICATION));
+//		aggregator.createAAS(aas2);
+//		aggregator.createAAS(aas1);
+//		
+//		Collection<IAssetAdministrationShell> aas = aggregator.getAASList();
+//		
+//		aas.stream().forEach(aasAd -> {
+//			System.out.println("AAS : " + aasAd.getIdShort());
+//			System.out.println("AAS Identification : " + aggregator.getAAS(aasAd.getIdentification()).toString());
+////			manager.createAAS((AssetAdministrationShell) aasAd, "");
+////			System.out.println("SM : " + aasAd.getSubmodel(new ModelUrn(SM_IDSHORT)));	
+////			System.out.println("Submodel From Aggregator : " + getSubmodelFromAgg(aggregator, );
+//		});
+//		
+//		System.out.println("AAS LIST : " + aggregator.getAASList());
+//		System.out.println("persistentSubmodel : " + persistentSubmodel);
+//		
+//		
+//
+//		assertEquals(SM_IDSHORT, persistentSubmodel.getIdShort());
+	}
+	
+	@SuppressWarnings("unchecked")
+	private List<ISubmodel> getSubmodelFromAgg(IAASAggregator aggregator, IIdentifier iIdentifier) {
+		MultiSubmodelProvider aasProvider = (MultiSubmodelProvider) aggregator.getAASProvider(iIdentifier);
+
+		List<Object> submodelObject = (List<Object>) aasProvider.getValue(PREFIX_SUBMODEL_PATH);
+		
+		System.out.println("SM OBJ whole : " + aasProvider.getValue(PREFIX_SUBMODEL_PATH));
+		List<ISubmodel> persistentSubmodelList = new ArrayList<>();
+		
+		submodelObject.stream().map(this::getSubmodel).forEach(persistentSubmodelList::add);
+
+		return persistentSubmodelList;
+	}
+	
+	private ISubmodel getSubmodel(Object obj) {
+		return Submodel.createAsFacade((Map<String, Object>) obj);
+		
+	}
 
 	@SuppressWarnings("unchecked")
 	private ISubmodel getSubmodelFromAggregator(MongoDBAASAggregator aggregator) {
@@ -232,7 +298,10 @@ public class TestMongoDBAggregator extends AASAggregatorSuite {
 	}
 
 	private void restartAasServer() {
+		System.out.println("Restarting AAS Component");
+		
 		component.stopComponent();
+		
 		component.startComponent();
 	}
 
@@ -246,10 +315,10 @@ public class TestMongoDBAggregator extends AASAggregatorSuite {
 
 	@AfterClass
 	public static void tearDownClass() {
-		registry.delete(new ModelUrn(aasId));
+//		registry.delete(new ModelUrn(aasId));
 
-		resetMongoDBTestData();
+//		resetMongoDBTestData();
 
-		component.stopComponent();
+//		component.stopComponent();
 	}
 }
