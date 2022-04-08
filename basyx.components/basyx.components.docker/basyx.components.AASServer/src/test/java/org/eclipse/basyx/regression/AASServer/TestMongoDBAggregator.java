@@ -315,10 +315,10 @@ public class TestMongoDBAggregator extends AASAggregatorSuite {
 
 	@AfterClass
 	public static void tearDownClass() {
-//		registry.delete(new ModelUrn(aasId));
+		registry.delete(new ModelUrn(aasId));
 
-//		resetMongoDBTestData();
+		resetMongoDBTestData();
 
-//		component.stopComponent();
+		component.stopComponent();
 	}
 }
