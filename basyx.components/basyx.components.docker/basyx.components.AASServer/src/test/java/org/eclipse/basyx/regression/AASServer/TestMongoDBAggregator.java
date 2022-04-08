@@ -97,7 +97,7 @@ public class TestMongoDBAggregator extends AASAggregatorSuite {
 
 		createAssetAdministrationShell();
 		createSubmodel();
-		createSubmodel2();
+//		createSubmodel2();
 	}
 
 	private static void createSubmodel2() {
