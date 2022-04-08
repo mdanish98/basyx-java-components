@@ -82,7 +82,7 @@ import org.xml.sax.SAXException;
  * remote. It uses the Aggregator API, i.e. AAS should be pushed to
  * ${URL}/shells
  *
- * @author schnicke, espen, fried, fischer
+ * @author schnicke, espen, fried, fischer, danish
  *
  */
 public class AASServerComponent implements IComponent {
@@ -215,23 +215,18 @@ public class AASServerComponent implements IComponent {
 		server = new BaSyxHTTPServer(context);
 		server.start();
 		
-		registerAASAndSMIfMongoDBBackend();
+		registerAASAndSMFromDBIfBackendIsMongoDB();
 	}
 	
-	private void registerAASAndSMIfMongoDBBackend() {
+	private void registerAASAndSMFromDBIfBackendIsMongoDB() {
 		if(!isMongoDBBackend() && registry != null && aasConfig != null ) {
 			return;
 		}
-		
-		logger.info("Registering AAS and SMs");
-		
-		aggregator = createAASAggregator();
 		
 		aggregator.getAASList().stream().forEach(this::registerAASAndSubmodels);
 	}
 	
 	private List<ISubmodel> registerAASAndSubmodels(IAssetAdministrationShell aas) {
-		logger.info("AAS : " + aas);
 		registerAAS(aas);
 		
 		registerSubmodels(aas);
@@ -242,55 +237,38 @@ public class AASServerComponent implements IComponent {
 	private void registerAAS(IAssetAdministrationShell aas) {
 		try {
 			manager.createAAS((AssetAdministrationShell) aas, getURL());
-			logger.info("#1234 The AAS " + aas.getIdShort() + " is Successfully Registered");
+			logger.info("The AAS " + aas.getIdShort() + " is Successfully Registered");
 		} catch(Exception e) {
-			logger.info("#1234 The AAS " + aas.getIdShort() + " is not Registered message : " + e);
+			logger.info("The AAS " + aas.getIdShort() + " is not Registered message : " + e);
 		}
 	}
 
 	private void registerSubmodels(IAssetAdministrationShell aas) {
 		List<ISubmodel> submodels = getSubmodelFromAggregator(aggregator, aas.getIdentification());
-		logger.info("SM Register ");
 		try {
 			submodels.stream().forEach(submodel -> manager.createSubmodel(aas.getIdentification(), (Submodel) submodel));
-			
-			logger.info("#1234 The SM " + submodels.toString() + " is Successfully Registered");
+			logger.info("The SM " + submodels.toString() + " is Successfully Registered");
 		} catch(Exception e) {
-			logger.info("#1234 The SM " + submodels.toString() + " is not Registered message : " + e);
+			logger.info("The SM " + submodels.toString() + " is not Registered message : " + e);
 		}
-		
-		
-//		logger.info("The SM " + submodels.get(1).getIdShort() + " is Successfully Registered");
 	}
 	
-	@SuppressWarnings("unchecked")
 	private List<ISubmodel> getSubmodelFromAggregator(IAASAggregator aggregator, IIdentifier iIdentifier) {
 		MultiSubmodelProvider aasProvider = (MultiSubmodelProvider) aggregator.getAASProvider(iIdentifier);
 
+		@SuppressWarnings("unchecked")
 		List<Object> submodelObject = (List<Object>) aasProvider.getValue(PREFIX_SUBMODEL_PATH);
-		System.out.println("#1234 SM OBJ whole : " + aasProvider.getValue(PREFIX_SUBMODEL_PATH));
+		
 		List<ISubmodel> persistentSubmodelList = new ArrayList<>();
 		
-		submodelObject.stream().map(this::getSubmodel).forEach(persistentSubmodelList::add);
-		
-		persistentSubmodelList.stream().forEach(System.out::println);
-		
-//		for(Object obj : submodelObject) {
-////			System.out.println("Obj : " + obj);
-//			ISubmodel pS = Submodel.createAsFacade((Map<String, Object>) obj);
-//			persistentSubmodelList.add(pS);
-////			persistentSubmodelList.add(Submodel.createAsFacade((Map<String, Object>) obj));
-//		}
-//
-////		List<ISubmodel> persistentSubmodel = (List<ISubmodel>) Submodel.createAsFacade((Map<String, Object>) submodelObject);
-//
-////		removeProviderFromMultiSubmodelProviderHashMap(aasProvider);
+		submodelObject.stream().map(this::getSubmodel).forEach(persistentSubmodelList::add);		
 
 		return persistentSubmodelList;
 	}
 	
-	private ISubmodel getSubmodel(Object obj) {
-		return Submodel.createAsFacade((Map<String, Object>) obj);	
+	@SuppressWarnings("unchecked")
+	private ISubmodel getSubmodel(Object submodelObject) {
+		return Submodel.createAsFacade((Map<String, Object>) submodelObject);	
 	}
 
 	private void loadAASServerFeaturesFromConfig() {
@@ -332,17 +310,17 @@ public class AASServerComponent implements IComponent {
 	}
 	
 	private void deregisterAASAndSmAddedDuringRuntime() {
-		if(registry != null) {
-			logger.info("Deregistering AAS and SMs");
-			registry.lookupAll().stream().forEach(aasDesc -> { getSubmodelDescriptors(aasDesc)
-								.stream().forEach(smDesc -> deregisterSubmodel(aasDesc, smDesc));
-								deregisterAAS(aasDesc);
-								});
-		}
+		if(registry == null) 
+			return;
+		
+		registry.lookupAll().stream().forEach(this::deregisterAASAndAccompanyingSM);
+
 	}
 	
-	private boolean isRegistryEmpty() {
-		return registry.lookupAll().isEmpty();
+	private void deregisterAASAndAccompanyingSM(AASDescriptor aasDescriptor) {
+		getSubmodelDescriptors(aasDescriptor).stream().forEach(submodelDescriptor -> deregisterSubmodel(aasDescriptor, submodelDescriptor));
+		
+		deregisterAAS(aasDescriptor);
 	}
 	
 	private List<SubmodelDescriptor> getSubmodelDescriptors(AASDescriptor aasDesc) {
@@ -426,7 +404,7 @@ public class AASServerComponent implements IComponent {
 	}
 
 	private VABHTTPInterface<?> createAggregatorServlet() {
-		IAASAggregator aggregator = createAASAggregator();
+		aggregator = createAASAggregator();
 		aasBundles = loadAASFromSource(aasConfig.getAASSourceAsList());
 		
 		if (aasBundles != null) {
