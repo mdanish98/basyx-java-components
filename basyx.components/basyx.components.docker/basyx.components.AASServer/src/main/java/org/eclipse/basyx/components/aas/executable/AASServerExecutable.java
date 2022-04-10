@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
  * at
  * <i>localhost:4000/aasServer/shells/${aasId}/aas/submodels/${submodelId}/submodel</i><br>
  *
- * @author schnicke, espen
+ * @author schnicke, espen, danish
  */
 public class AASServerExecutable {
 	// Creates a Logger based on the current class
@@ -53,6 +53,10 @@ public class AASServerExecutable {
 
 		logger.info("BaSyx AAS Server component started");
 		
+		shutdownComponent(component);
+	}
+
+	private static void shutdownComponent(AASServerComponent component) {
 		Thread shutdownListener = new Thread(){
 		    public void run(){
 		    	component.stopComponent();
