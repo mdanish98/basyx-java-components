@@ -144,6 +144,10 @@ public class BaSyxContextConfiguration extends BaSyxConfiguration {
 		if (atLeastOneJwtPropertyIsSet()) {
 			configureJwtAuthentication(baSyxContext);
 		}
+		
+		if(getAccessControlAllowOrigin() != null) {
+			baSyxContext.setCrossOriginResourceSharingConfiguration(sslKeyPass);
+		}
 
 		return baSyxContext;
 	}
