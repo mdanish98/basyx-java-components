@@ -1,35 +1,59 @@
 # This workflow will build a Java project with Maven, and cache/restore any dependencies to improve the workflow execution time
 # For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
 
-name: Java CI with Maven
+name: BaSyx Java DataBridge CI with Maven
 
 on:
+  push:
+    branches: [ feature/updater ]
   pull_request:
-    branches: [ development ]
+    branches: [ feature/updater ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
-    # Service containers to run with `container-job`
+
     services:
-      # Label used to access the service container
-      postgres:
-        # Docker Hub image
-        image: postgres
-        # Provide the password for postgres
-        env:
-          POSTGRES_PASSWORD: admin
-        # Set health checks to wait until postgres has started
+      prometheus:
+        image: n14s/prometheus:1.0.0
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          - "--config.file=/etc/prometheus/config/prometheus/prometheus.yml"
+          - "--storage.tsdb.path=/prometheus"
+          - "--web.console.libraries=/etc/prometheus/console_libraries"
+          - "--web.console.templates=/etc/prometheus/consoles"
+          - "--storage.tsdb.retention=200h"
+          - "--web.enable-lifecycle"
         ports:
-          # Maps tcp port 5432 on service container to the host
-          - 5432:5432
-    
+          - 9090:9090
+      
+      node-exporter:
+        image: prom/node-exporter:latest
+        options: >-
+          - "--path.procfs=/host/proc"
+          - "--path.sysfs=/host/sys"
+          - "--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)"
+          - "--collector.textfile.directory=/etc/nodeexporter"
+        ports:
+          - 9100:9100
+
+      cadvisor:
+        image: gcr.io/cadvisor/cadvisor:v0.44.0
+        ports:
+          - 8080:8080
+      
+      aas-server:
+        image: eclipsebasyx/aas-server:1.0.1
+        ports:
+          - 8081:4001
+
+      prometheus-aas-router:
+        image: n14s/prometheus-aas-router:1.0.1
+        env:
+          PROMETHEUS_HOST: prometheus
+          PROMETHEUS_PORT: 9090
+          AAS_SERVER_HOST: aas-server
+          AAS_SERVER_PORT: 4001
+
     steps:
     - uses: actions/checkout@v2
     - name: Set up JDK 11
@@ -38,9 +62,45 @@ jobs:
         java-version: '11'
         distribution: 'adopt'
         cache: maven
-    - name: Setup Postgres
-      run: psql -f ci/sql/setup_postgres.sql postgresql://postgres:admin@localhost:5432/postgres
-    - name: Build with Maven
-      run: mvn -B package --file basyx.components/pom.xml
-      env:       
-        GITHUB_TOKEN: ${{ github.token }}
+    - name: Install Updater Component-Core
+      run: mvn clean install -f basyx.components/basyx.components.updater/basyx.components.updater.core/pom.xml
+    - name: Install Updater Component-Camel-AAS
+      run: mvn install -f basyx.components/basyx.components.updater/basyx.components.updater.camel-aas/pom.xml
+    - name: Install Updater Component-Camel-ActiveMQ
+      run: mvn install -f basyx.components/basyx.components.updater/basyx.components.updater.camel-activemq/pom.xml
+    - name: Install Updater Component-Camel-Hono
+      run: mvn install -f basyx.components/basyx.components.updater/basyx.components.updater.camel-hono/pom.xml
+    - name: Install Updater Component-Camel-HTTP
+      run: mvn install -f basyx.components/basyx.components.updater/basyx.components.updater.camel-http/pom.xml
+    - name: Install Updater Component-Camel-HTTPpolling
+      run: mvn install -f basyx.components/basyx.components.updater/basyx.components.updater.camel-httppolling/pom.xml
+    - name: Install Updater Component-Camel-Kafka
+      run: mvn install -f basyx.components/basyx.components.updater/basyx.components.updater.camel-kafka/pom.xml
+    - name: Install Updater Component-Camel-OPCUA
+      run: mvn install -f basyx.components/basyx.components.updater/basyx.components.updater.camel-opcua/pom.xml
+    - name: Install Updater Component-Camel-Paho
+      run: mvn install -f basyx.components/basyx.components.updater/basyx.components.updater.camel-paho/pom.xml
+    - name: Install Updater Component-Camel-Prometheus
+      run: mvn install -f basyx.components/basyx.components.updater/basyx.components.updater.camel-prometheus/pom.xml
+    - name: Install Updater Component-Camel-Timer
+      run: mvn install -f basyx.components/basyx.components.updater/basyx.components.updater.camel-timer/pom.xml
+    - name: Install Updater Component-Camel-JSONata
+      run: mvn install -f basyx.components/basyx.components.updater/basyx.components.updater.transformer.camel-jsonata/pom.xml
+    - name: Install Updater Component-Camel-JSONJackson
+      run: mvn install -f basyx.components/basyx.components.updater/basyx.components.updater.transformer.camel-jsonjackson/pom.xml
+    - name: Install Updater Component-Examples
+      run: mvn install -f basyx.components/basyx.components.updater/basyx.components.updater.examples/pom.xml -DskipTests
+    - name: Test Single AAS Kafka JSONata
+      run: mvn test -f basyx.components/basyx.components.updater/basyx.components.updater.examples/basyx.components.updater.examples.kafka-jsonata-aas/pom.xml
+    - name: Test Multiple AAS Kafka JSONata
+      run: mvn test -f basyx.components/basyx.components.updater/basyx.components.updater.examples/basyx.components.updater.examples.kafka-jsonatamultiple-aas/pom.xml
+    - name: Test HONO AAS JSONata
+      run: mvn test -f basyx.components/basyx.components.updater/basyx.components.updater.examples/basyx.components.updater.examples.hono-jsonata-aas/pom.xml
+    - name: Test ActiveMQ AAS JSONata 
+      run: mvn test -f basyx.components/basyx.components.updater/basyx.components.updater.examples/basyx.components.updater.examples.activemq-jsonata-aas/pom.xml
+    - name: Test MQTT AAS JSONata 
+      run: mvn test -f basyx.components/basyx.components.updater/basyx.components.updater.examples/basyx.components.updater.examples.mqtt-jsonata-aas/pom.xml
+    - name: Test OPC UA AAS JSONata
+      run: mvn test -f basyx.components/basyx.components.updater/basyx.components.updater.examples/basyx.components.updater.examples.opcua-jsonata-aas/pom.xml
+    - name: Test HTTP Polling
+      run: mvn test -f basyx.components/basyx.components.updater/basyx.components.updater.examples/basyx.components.updater.examples.httppolling-jsonata-aas/pom.xml
