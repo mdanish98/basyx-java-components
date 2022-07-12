@@ -24,6 +24,7 @@ import basyx.components.updater.core.configuration.factory.RoutesConfigurationFa
 import basyx.components.updater.core.configuration.route.core.RoutesConfiguration;
 import basyx.components.updater.core.configuration.route.timer.TimerRouteConfiguration;
 import basyx.components.updater.transformer.cameljsonata.configuration.factory.JsonataDefaultConfigurationFactory;
+import org.eclipse.basyx.submodel.metamodel.connected.submodelelement.ConnectedSubmodelElement;
 
 public class TestAASUpdater {
 	private static AASServerComponent aasServer;
@@ -81,13 +82,13 @@ public class TestAASUpdater {
 		aasServer.stopComponent();
 	}
 
-	private void checkIfPropertyIsUpdated() throws InterruptedException {
+	public void checkIfPropertyIsUpdated() throws InterruptedException {
 		ConnectedAssetAdministrationShellManager manager = new ConnectedAssetAdministrationShellManager(registry);
 		ConnectedAssetAdministrationShell aas = manager.retrieveAAS(deviceAAS);
 		ISubmodel sm = aas.getSubmodels().get("ConnectedSubmodel");
 
-		ISubmodelElement updatedProp2 = sm.getSubmodelElement("ConnectedPropertyB");
-		Object propValue2 = updatedProp2.getValue();
+		ConnectedSubmodelElement updatedProp2 = (ConnectedSubmodelElement) sm.getSubmodelElement("ConnectedPropertyB");
+		String propValue2 = updatedProp2.getIdShort();
 		System.out.println("UpdatedPROPB: " + propValue2);
 	}
 }
