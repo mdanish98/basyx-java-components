@@ -49,10 +49,10 @@ jobs:
       prometheus-aas-router:
         image: n14s/prometheus-aas-router:1.0.1
         env:
-          PROMETHEUS_HOST:prometheus
-          PROMETHEUS_PORT:9090
-          AAS_SERVER_HOST:aas-server
-          AAS_SERVER_PORT:4001
+          PROMETHEUS_HOST: prometheus
+          PROMETHEUS_PORT: 9090
+          AAS_SERVER_HOST: aas-server
+          AAS_SERVER_PORT: 4001
 
     steps:
     - uses: actions/checkout@v2
