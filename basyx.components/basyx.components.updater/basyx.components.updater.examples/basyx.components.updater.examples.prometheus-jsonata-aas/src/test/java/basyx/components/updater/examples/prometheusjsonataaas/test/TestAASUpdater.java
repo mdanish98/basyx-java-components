@@ -88,7 +88,7 @@ public class TestAASUpdater {
 		ISubmodel sm = aas.getSubmodels().get("ConnectedSubmodel");
 
 		ConnectedSubmodelElement updatedProp2 = (ConnectedSubmodelElement) sm.getSubmodelElement("ConnectedPropertyB");
-		String propValue2 = updatedProp2.getIdShort();
+		Object propValue2 = updatedProp2.getValue();
 		System.out.println("UpdatedPROPB: " + propValue2);
 	}
 }
