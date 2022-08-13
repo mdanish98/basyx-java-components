@@ -37,7 +37,7 @@ public class AASProducer extends DefaultProducer {
 	@Override
 	public void process(Exchange exchange) throws Exception {
 		// Evaluate exchange message as String
-		Object messageBody = exchange.getMessage().getBody(String.class);
+		Object messageBody = exchange.getIn().getBody(String.class);
 		// if valueType of Property is String, fix double quotes, else infer Object by given Type
 		if (connectedProperty.getValueType().equals(ValueType.String)) {
 			connectedProperty.setValue(fixMessage(messageBody.toString()));
