@@ -15,7 +15,7 @@ jobs:
 
     services:
       prometheus:
-        image: n14s/prometheus:1.0.0
+        image: prom/prometheus:main
         ports:
           - 9090:9090
       
