@@ -42,6 +42,8 @@ import org.apache.catalina.Context;
 import org.apache.catalina.core.StandardContext;
 import org.apache.catalina.servlets.DefaultServlet;
 import org.apache.catalina.startup.Tomcat;
+import org.apache.catalina.webresources.DirResourceSet;
+import org.apache.catalina.webresources.StandardRoot;
 import org.apache.commons.io.IOUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.eclipse.basyx.aas.aggregator.AASAggregatorAPIHelper;
@@ -798,6 +800,12 @@ public class AASServerComponent implements IComponent {
 		childContext.setPath(childContextPath);
 		childContext.setDocBase(childDocbasePath);
 		childContext.addLifecycleListener(new Tomcat.FixContextListener());
+		
+		// Configure the resources for the context
+        StandardRoot standardRoot = new StandardRoot(childContext);
+        DirResourceSet dirResourceSet = new DirResourceSet(standardRoot, "/", childDocbasePath, "/");
+        standardRoot.addPreResources(dirResourceSet);
+        childContext.setResources(standardRoot);
 		
 		return childContext;
 	}
