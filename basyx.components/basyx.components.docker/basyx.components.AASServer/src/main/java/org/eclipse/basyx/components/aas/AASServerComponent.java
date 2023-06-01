@@ -24,9 +24,11 @@
  ******************************************************************************/
 package org.eclipse.basyx.components.aas;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,6 +46,7 @@ import org.apache.catalina.servlets.DefaultServlet;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.catalina.webresources.DirResourceSet;
 import org.apache.catalina.webresources.StandardRoot;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.eclipse.basyx.aas.aggregator.AASAggregatorAPIHelper;
@@ -261,6 +264,8 @@ public class AASServerComponent implements IComponent {
 
 		// An initial AAS has been loaded from the drive?
 		if (aasBundles != null) {
+			createBasyxResourceDirectoryIfNotExists();
+			
 			addAasxFilesResourceServlet(context);
 
 			// 2. Fix the file paths according to the servlet configuration
@@ -274,6 +279,17 @@ public class AASServerComponent implements IComponent {
 		server.start();
 		
 		registerPreexistingAASAndSMIfPossible();
+	}
+
+	private void createBasyxResourceDirectoryIfNotExists() {
+		File directory = new File(AASX_RES_FILE_DOCBASE_PATH);
+		
+		if (directory.exists())
+			return;
+		
+        if (directory.mkdir()) {
+        	logger.info("Directory created successfully : " + directory.getAbsolutePath());
+        }
 	}
 
 	private DefaultServlet createDefaultServlet() {
