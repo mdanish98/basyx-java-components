@@ -27,6 +27,9 @@ package org.eclipse.basyx.regression.AASServer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -57,6 +60,7 @@ import org.eclipse.basyx.vab.modelprovider.api.IModelProvider;
 import org.eclipse.basyx.vab.protocol.api.IConnectorFactory;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -93,6 +97,25 @@ public class AASServerComponentTest {
 	private static IIdentifier submodel2Identifier = new CustomId("submodelId2");
 	
 	private static IAASAggregator aggregator;
+	
+	@BeforeClass
+	public static void init() {
+		String tempDir = System.getProperty("java.io.tmpdir");
+        String newDirName = "basyx-temp";
+
+        Path dirPath = Paths.get(tempDir, newDirName);
+
+        if (!Files.exists(dirPath)) {
+            try {
+                Files.createDirectory(dirPath);
+                System.out.println("Directory created successfully. : " + newDirName);
+            } catch (Exception e) {
+                System.err.println("Failed to create directory: " + e.getMessage());
+            }
+        } else {
+            System.out.println("Directory already exists." + newDirName);
+        }
+	}
 
 	private static void setUp(String source) {
 		initConfiguration(source);
